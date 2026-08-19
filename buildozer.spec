@@ -3,6 +3,7 @@
 title = NGL Spammer
 package.name = nglspammer
 package.domain = org.anonymousipkiller
+source.dir = .
 
 version = 1.0.0
 version.code = 1
