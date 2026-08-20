@@ -17,8 +17,7 @@ warn_on_root = 0
 
 android.accept_sdk_license = True
 android.api = 34
-android.minapi = 21
-android.ndk = 25b
+android.minapi = 24
 android.sdk = 34
 android.build_tools_version = 34.0.0
 android.arch = arm64-v8a
