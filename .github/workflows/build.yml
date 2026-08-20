@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     container:
       image: kivy/buildozer:latest
       options: --user root
@@ -17,17 +16,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fix Android SDK + Install build-tools 34.0.0
+      - name: First run - Download Android SDK (will fail on AIDL, that's expected)
+        run: |
+          buildozer android debug || true
+          echo "SDK should be downloaded now..."
+
+      - name: Force install build-tools 34.0.0 + fix AIDL
         run: |
           set -e
           
           export ANDROID_HOME=/home/user/.buildozer/android/platform/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin
+          export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin"
           
-          echo ">>> Accepting licenses..."
+          find /home/user/.buildozer -name "sdkmanager" 2>/dev/null || true
+          
           yes | sdkmanager --licenses || true
-          
-          echo ">>> Installing build-tools 34.0.0 + platform 34..."
           sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "platform-tools"
           
           mkdir -p $ANDROID_HOME/build-tools
@@ -36,19 +39,11 @@ jobs:
           ls -la $ANDROID_HOME/build-tools/34.0.0/aidl
           chmod +x $ANDROID_HOME/build-tools/34.0.0/aidl
           
-          echo ">>> Android SDK fixed!"
+          echo ">>> build-tools 34.0.0 + AIDL fixed!"
 
-      - name: Prevent buildozer from installing build-tools 37
-        run: |
-          mkdir -p /home/user/.buildozer/android/platform/android-sdk/build-tools
-          touch /home/user/.buildozer/android/platform/android-sdk/build-tools/.donotinstall
-
-      - name: Clean previous build
+      - name: Clean & Build again (seharusnya berhasil)
         run: |
           buildozer android clean || true
-
-      - name: Build APK
-        run: |
           buildozer -v android debug
 
       - name: Upload APK

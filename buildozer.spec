@@ -23,4 +23,3 @@ android.sdk = 34
 android.build_tools_version = 34.0.0
 android.arch = arm64-v8a
 android.permissions = INTERNET
-android.skip_update = True
