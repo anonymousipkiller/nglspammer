@@ -18,7 +18,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install system dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev build-essential git wget unzip
@@ -28,10 +28,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython buildozer
 
-    - name: Build APK with Buildozer
+    - name: Build APK
       run: buildozer -v android debug
 
-    - name: Upload APK as artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: ngl-spammer-apk
