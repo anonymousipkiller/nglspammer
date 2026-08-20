@@ -8,16 +8,51 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer:latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build APK
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
       run: |
-        buildozer -v android debug
+        sudo apt-get update
+        sudo apt-get install -y openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev build-essential git wget unzip
+
+    - name: Install Buildozer
+      run: |
+        python -m pip install --upgrade pip
+        pip install cython buildozer
+
+    - name: Install Android SDK and build-tools
+      run: |
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+        mkdir -p $ANDROID_HOME/licenses
+        mkdir -p $ANDROID_HOME/tools/bin
+        
+        # Download SDK
+        cd $ANDROID_HOME
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        unzip -q cmdline-tools.zip
+        rm cmdline-tools.zip
+        mkdir -p cmdline-tools/latest
+        mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+        
+        # Symlink
+        ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
+        chmod +x $ANDROID_HOME/tools/bin/sdkmanager
+        
+        # Accept licenses dan install build-tools 29
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+        yes | $ANDROID_HOME/tools/bin/sdkmanager "build-tools;29.0.0"
+        yes | $ANDROID_HOME/tools/bin/sdkmanager "platforms;android-29"
+
+    - name: Build APK
+      run: echo y | buildozer -v android debug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
