@@ -8,18 +8,34 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev build-essential git wget unzip
+
+    - name: Install Buildozer and p4a
+      run: |
+        python -m pip install --upgrade pip
+        pip install cython buildozer
+        pip install python-for-android
+
     - name: Build APK with p4a
       run: |
-        export P4A_ROOT=/home/user/.local/share/python-for-android
-        export ANDROID_SDK_ROOT=/home/user/.buildozer/android/platform/android-sdk
-        export ANDROID_NDK_ROOT=/home/user/.buildozer/android/platform/android-ndk-r25b
+        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+        export ANDROID_NDK_ROOT=$HOME/.buildozer/android/platform/android-ndk-r25b
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
 
         p4a apk --private . \
           --package=org.anonymouspickiller.nglspammer \
