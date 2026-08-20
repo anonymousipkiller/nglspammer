@@ -2,7 +2,7 @@
 
 title = NGL Spammer
 package.name = nglspammer
-package.domain = org.anonymousupikiller
+package.domain = org.anonymouspickiller
 source.dir = .
 version = 1.0.0
 requirements = python3,kivy,requests
