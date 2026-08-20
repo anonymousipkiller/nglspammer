@@ -16,32 +16,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: First run - Download Android SDK (will fail on AIDL, that's expected)
+      - name: First run - Download Android SDK (akan gagal, itu normal)
         run: |
           buildozer android debug || true
-          echo "SDK should be downloaded now..."
+          echo "===== Cek lokasi SDK ====="
+          find /github/home /home -type d -name "android-sdk" 2>/dev/null || true
+          find /github/home /home -name "sdkmanager" 2>/dev/null || true
 
       - name: Force install build-tools 34.0.0 + fix AIDL
         run: |
           set -e
           
-          export ANDROID_HOME=/home/user/.buildozer/android/platform/android-sdk
-          export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin"
+          export ANDROID_HOME=/github/home/.buildozer/android/platform/android-sdk
           
-          find /home/user/.buildozer -name "sdkmanager" 2>/dev/null || true
+          SDKMANAGER=$(find /github/home /home -name "sdkmanager" 2>/dev/null | head -n 1)
           
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager masih belum ada, install cmdline-tools dulu..."
+            mkdir -p $ANDROID_HOME/cmdline-tools
+            cd /tmp
+            curl -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q cmdline-tools.zip
+            mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+            SDKMANAGER=$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager
+          fi
+          
+          export PATH="$PATH:$(dirname $SDKMANAGER)"
+          
+          echo "Menggunakan sdkmanager di: $SDKMANAGER"
+          
+          yes | $SDKMANAGER --licenses || true
+          $SDKMANAGER --install "build-tools;34.0.0" "platforms;android-34" "platform-tools"
           
           mkdir -p $ANDROID_HOME/build-tools
           ln -sfn $ANDROID_HOME/build-tools/34.0.0 $ANDROID_HOME/build-tools/34.0.0
+          chmod +x $ANDROID_HOME/build-tools/34.0.0/aidl || true
           
+          echo "===== Cek hasil ====="
           ls -la $ANDROID_HOME/build-tools/34.0.0/aidl
-          chmod +x $ANDROID_HOME/build-tools/34.0.0/aidl
-          
-          echo ">>> build-tools 34.0.0 + AIDL fixed!"
+          echo ">>> BERHASIL install build-tools 34.0.0"
 
-      - name: Clean & Build again (seharusnya berhasil)
+      - name: Clean & Build final
         run: |
           buildozer android clean || true
           buildozer -v android debug
