@@ -1,40 +1,40 @@
-name: Build APK with Buildozer (Docker)
+name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: kivy/buildozer:latest
+      options: --user root
+
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build APK inside Kivy Docker image
+      - name: Install missing Android build-tools + AIDL
         run: |
-          docker run --rm \
-            -e BUILDOZER_ANDROID_BUILD_TOOLS_VERSION=30.0.0 \
-            -e ANDROID_SDK_ROOT=/home/user/.buildozer/android/platform/android-sdk \
-            -v "$(pwd)":/home/user/hostcwd \
-            kivy/buildozer:latest \
-            android debug 2>&1 | tee build_output.log
+          export ANDROID_HOME=/home/user/.buildozer/android/platform/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin
 
-      - name: Extract error tail
-        if: always()
-        run: tail -n 150 build_output.log > error_tail.txt
+          yes | sdkmanager --licenses || true
+          sdkmanager "build-tools;34.0.0" "platform-tools" "platforms;android-34"
 
-      - name: Upload error tail
-        if: always()
+          mkdir -p $ANDROID_HOME/build-tools
+          ln -sf $ANDROID_HOME/build-tools/34.0.0 $ANDROID_HOME/build-tools/34.0.0
+          chmod +x $ANDROID_HOME/build-tools/34.0.0/aidl || true
+
+      - name: Build APK
+        run: |
+          buildozer android clean || true
+          buildozer -v android debug
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: error-log-tail
-          path: error_tail.txt
-
-      - name: Upload APK if success
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk-output
+          name: app-debug
           path: bin/*.apk
