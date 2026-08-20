@@ -2,12 +2,13 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     container:
       image: kivy/buildozer:latest
       options: --user root
@@ -16,27 +17,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find and fix sdkmanager
+      - name: Fix Android SDK + Install build-tools 34.0.0
         run: |
-          echo "Mencari sdkmanager..."
-          find / -name "sdkmanager" 2>/dev/null || echo "sdkmanager tidak ditemukan"
-          echo "Mencari cmdline-tools..."
-          find / -path "*/cmdline-tools/*/sdkmanager" 2>/dev/null || echo "cmdline-tools tidak ditemukan"
-
-      - name: Install Android build-tools
-        run: |
+          set -e
+          
           export ANDROID_HOME=/home/user/.buildozer/android/platform/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          export PATH=$PATH:$ANDROID_HOME/tools/bin
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin
+          
+          echo ">>> Accepting licenses..."
+          yes | sdkmanager --licenses || true
+          
+          echo ">>> Installing build-tools 34.0.0 + platform 34..."
+          sdkmanager --install "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          
+          mkdir -p $ANDROID_HOME/build-tools
+          ln -sfn $ANDROID_HOME/build-tools/34.0.0 $ANDROID_HOME/build-tools/34.0.0
+          
+          ls -la $ANDROID_HOME/build-tools/34.0.0/aidl
+          chmod +x $ANDROID_HOME/build-tools/34.0.0/aidl
+          
+          echo ">>> Android SDK fixed!"
 
-          SDKMANAGER=$(find / -name "sdkmanager" 2>/dev/null | head -1)
-          if [ -n "$SDKMANAGER" ]; then
-            echo "sdkmanager ditemukan di: $SDKMANAGER"
-            yes | $SDKMANAGER --licenses || true
-            $SDKMANAGER "build-tools;34.0.0" "platform-tools" "platforms;android-34"
-          else
-            echo "sdkmanager tidak ditemukan, lanjut ke build..."
-          fi
+      - name: Prevent buildozer from installing build-tools 37
+        run: |
+          mkdir -p /home/user/.buildozer/android/platform/android-sdk/build-tools
+          touch /home/user/.buildozer/android/platform/android-sdk/build-tools/.donotinstall
+
+      - name: Clean previous build
+        run: |
+          buildozer android clean || true
 
       - name: Build APK
         run: |
@@ -45,5 +54,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: app-debug-apk
           path: bin/*.apk
+          if-no-files-found: error
