@@ -21,18 +21,21 @@ jobs:
           buildozer android debug || true
           echo "===== Cek lokasi SDK ====="
           find /github/home /home -type d -name "android-sdk" 2>/dev/null || true
-          find /github/home /home -name "sdkmanager" 2>/dev/null || true
 
-      - name: Force install build-tools 34.0.0 + fix AIDL
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'build-tools;34.0.0 platforms;android-34 platform-tools'
+
+      - name: Install build-tools 34.0.0 with correct command
         run: |
-          set -e
-          
           export ANDROID_HOME=/github/home/.buildozer/android/platform/android-sdk
+          export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin"
           
           SDKMANAGER=$(find /github/home /home -name "sdkmanager" 2>/dev/null | head -n 1)
           
           if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager masih belum ada, install cmdline-tools dulu..."
+            echo "sdkmanager tidak ditemukan, install manual..."
             mkdir -p $ANDROID_HOME/cmdline-tools
             cd /tmp
             curl -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
@@ -46,7 +49,7 @@ jobs:
           echo "Menggunakan sdkmanager di: $SDKMANAGER"
           
           yes | $SDKMANAGER --licenses || true
-          $SDKMANAGER --install "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+          $SDKMANAGER "build-tools;34.0.0" "platforms;android-34" "platform-tools"
           
           mkdir -p $ANDROID_HOME/build-tools
           ln -sfn $ANDROID_HOME/build-tools/34.0.0 $ANDROID_HOME/build-tools/34.0.0
