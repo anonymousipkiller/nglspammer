@@ -16,9 +16,9 @@ log_level = 2
 warn_on_root = 1
 
 android.accept_sdk_license = True
-android.api = 30
+android.api = 29
 android.minapi = 21
-android.ndk = 25b
-android.sdk = 30
+android.ndk = 21d
+android.sdk = 29
 android.arch = arm64-v8a
 android.permissions = INTERNET
