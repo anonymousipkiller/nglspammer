@@ -28,26 +28,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install cython buildozer
 
-    - name: Download and install Android SDK command-line tools
+    - name: Accept SDK license and fix sdkmanager path
       run: |
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        mkdir -p $ANDROID_SDK_ROOT
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
-        unzip -q /tmp/cmdline-tools.zip -d $ANDROID_SDK_ROOT
-        mv $ANDROID_SDK_ROOT/cmdline-tools $ANDROID_SDK_ROOT/latest
-        export PATH=$PATH:$ANDROID_SDK_ROOT/latest/bin
-
-    - name: Accept SDK licenses
-      run: |
-        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        export PATH=$PATH:$ANDROID_SDK_ROOT/latest/bin
-        yes | sdkmanager --licenses || true
-
-    - name: Install Build-Tools 30
-      run: |
-        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        export PATH=$PATH:$ANDROID_SDK_ROOT/latest/bin
-        yes | sdkmanager "build-tools;30.0.3" || true
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        mkdir -p $ANDROID_SDK_ROOT/tools/bin
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+        # BUAT SYMLINK BIAR BUILDOZER NEMU SDKMANAGER
+        ln -sf $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager $ANDROID_SDK_ROOT/tools/bin/sdkmanager
 
     - name: Build APK
       run: echo y | buildozer -v android debug
