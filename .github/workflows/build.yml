@@ -1,4 +1,4 @@
-name: Build APK with Buildozer
+name: Build APK with Buildozer (Docker)
 
 on:
   push:
@@ -8,82 +8,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-
-    env:
-      ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
-      ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Build APK inside Kivy Docker image
+        run: |
+          docker run --rm \
+            -v "$(pwd)":/home/user/hostcwd \
+            kivy/buildozer:latest \
+            android debug 2>&1 | tee build_output.log
+
+      - name: Extract error tail
+        if: always()
+        run: tail -n 150 build_output.log > error_tail.txt
+
+      - name: Upload error tail
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          python-version: '3.11'
+          name: error-log-tail
+          path: error_tail.txt
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            git zip unzip \
-            python3-pip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev \
-            libtinfo5 cmake libffi-dev libssl-dev \
-            build-essential ccache
-
-      - name: Install Buildozer & Cython
-        run: |
-          pip install --upgrade pip
-          pip install buildozer==1.5.0 cython==0.29.33 virtualenv
-
-      - name: Cache Buildozer global
-        uses: actions/cache@v4
-        with:
-          path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
-
-      - name: Cache Buildozer local
-        uses: actions/cache@v4
-        with:
-          path: .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
-
-      - name: Install Android SDK
-        run: |
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          cd $ANDROID_SDK_ROOT/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
-          unzip -q tools.zip -d temp
-          mv temp/cmdline-tools latest
-          rm -rf temp tools.zip
-
-      - name: Add SDK to PATH
-        run: |
-          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
-          mkdir -p $ANDROID_SDK_ROOT/tools/bin
-          ln -sf $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager $ANDROID_SDK_ROOT/tools/bin/sdkmanager
-
-      - name: Accept licenses & install SDK
-        run: |
-          yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
-          sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            "ndk;25.2.9519653"
-
-      - name: Build APK
-        run: echo y | buildozer -v android debug
-
-      - name: Upload APK
+      - name: Upload APK if success
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: apk-output
