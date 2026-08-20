@@ -18,10 +18,10 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
+    - name: Install full dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev build-essential git wget unzip
+        sudo apt-get install -y openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev build-essential git wget unzip automake autoconf-archive
 
     - name: Install Buildozer and p4a
       run: |
