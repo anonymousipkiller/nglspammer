@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -16,21 +16,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install missing Android build-tools + AIDL
+      - name: Find and fix sdkmanager
+        run: |
+          echo "Mencari sdkmanager..."
+          find / -name "sdkmanager" 2>/dev/null || echo "sdkmanager tidak ditemukan"
+          echo "Mencari cmdline-tools..."
+          find / -path "*/cmdline-tools/*/sdkmanager" 2>/dev/null || echo "cmdline-tools tidak ditemukan"
+
+      - name: Install Android build-tools
         run: |
           export ANDROID_HOME=/home/user/.buildozer/android/platform/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          export PATH=$PATH:$ANDROID_HOME/tools/bin
 
-          yes | sdkmanager --licenses || true
-          sdkmanager "build-tools;34.0.0" "platform-tools" "platforms;android-34"
-
-          mkdir -p $ANDROID_HOME/build-tools
-          ln -sf $ANDROID_HOME/build-tools/34.0.0 $ANDROID_HOME/build-tools/34.0.0
-          chmod +x $ANDROID_HOME/build-tools/34.0.0/aidl || true
+          SDKMANAGER=$(find / -name "sdkmanager" 2>/dev/null | head -1)
+          if [ -n "$SDKMANAGER" ]; then
+            echo "sdkmanager ditemukan di: $SDKMANAGER"
+            yes | $SDKMANAGER --licenses || true
+            $SDKMANAGER "build-tools;34.0.0" "platform-tools" "platforms;android-34"
+          else
+            echo "sdkmanager tidak ditemukan, lanjut ke build..."
+          fi
 
       - name: Build APK
         run: |
-          buildozer android clean || true
           buildozer -v android debug
 
       - name: Upload APK
