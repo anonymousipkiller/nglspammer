@@ -22,22 +22,17 @@ jobs:
           echo "===== Cek lokasi SDK ====="
           find /github/home /home -type d -name "android-sdk" 2>/dev/null || true
 
-      - name: Setup Android SDK & licenses
+      - name: Force install aidl (cara kasar)
         run: |
-          SDKMANAGER=$(find $HOME -name sdkmanager 2>/dev/null | head -n 1)
+          apt-get update
+          apt-get install -y aidl libstdc++6
           
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager tidak ketemu, coba path default"
-            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          fi
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0
+          cp $(which aidl) $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/
+          chmod +x $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/aidl
           
-          echo "Menggunakan sdkmanager: $SDKMANAGER"
-          
-          yes | $SDKMANAGER --licenses > /dev/null || true
-          yes | $SDKMANAGER "build-tools;34.0.0" "platforms;android-34" "platform-tools" || true
-          
-          echo "=== Cek build-tools ==="
-          find $HOME -path "*/build-tools/*/aidl" 2>/dev/null || echo "aidl belum ketemu"
+          echo "aidl dipaksa masuk:"
+          ls -la $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/
 
       - name: Clean & Build final
         run: |
