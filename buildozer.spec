@@ -22,6 +22,9 @@ log_level = 2
 warn_on_root = 1
 
 android.accept_sdk_license = True
+android.ndk = 21d
+android.api = 29
+android.sdk = 29
 android.api = 33
 android.minapi = 21
 android.ndk = 23b
