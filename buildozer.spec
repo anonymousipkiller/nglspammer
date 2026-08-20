@@ -20,5 +20,6 @@ android.api = 30
 android.minapi = 21
 android.ndk = 23b
 android.sdk = 30
+android.build_tools = 30.0.0
 android.arch = arm64-v8a
 android.permissions = INTERNET

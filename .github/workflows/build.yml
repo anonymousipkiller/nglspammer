@@ -15,6 +15,8 @@ jobs:
       - name: Build APK inside Kivy Docker image
         run: |
           docker run --rm \
+            -e BUILDOZER_ANDROID_BUILD_TOOLS_VERSION=30.0.0 \
+            -e ANDROID_SDK_ROOT=/home/user/.buildozer/android/platform/android-sdk \
             -v "$(pwd)":/home/user/hostcwd \
             kivy/buildozer:latest \
             android debug 2>&1 | tee build_output.log
