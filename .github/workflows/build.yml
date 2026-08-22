@@ -8,41 +8,53 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer:latest
-      options: --user root
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: First run - Download Android SDK
-        run: |
-          buildozer android debug || true
-          echo "===== Cek lokasi SDK ====="
-          find /github/home /home -type d -name "android-sdk" 2>/dev/null || true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Force install aidl (cara pasti)
+      - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y aidl libstdc++6
-          
-          mkdir -p $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0
-          cp $(which aidl) $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/
-          chmod +x $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/aidl
-          
-          echo "aidl dipaksa masuk:"
-          ls -la $HOME/.buildozer/android/platform/android-sdk/build-tools/34.0.0/
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev build-essential git wget unzip
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install cython buildozer
+
+      - name: Setup Android SDK manually
+        run: |
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
+          unzip -q tools.zip
+          mv cmdline-tools latest
+          rm tools.zip
+          mkdir -p $ANDROID_HOME/tools/bin
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
+          export PATH="$PATH:$ANDROID_HOME/tools/bin"
+
+      - name: Accept licenses and install build-tools
+        run: |
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          export PATH="$PATH:$ANDROID_HOME/tools/bin"
+          yes | sdkmanager --licenses || true
+          sdkmanager "build-tools;34.0.0"
+          sdkmanager "platforms;android-34"
 
       - name: Build APK
         run: |
-          buildozer -v android debug
+          echo y | buildozer -v android debug
 
-          - name: Install Android SDK platforms
-  run: |
-    yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" || true
-    yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" || true
-
-         - name: Build APK
-  run: |
-    buildozer -v android debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: bin/*.apk
