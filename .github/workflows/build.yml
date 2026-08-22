@@ -1,87 +1,31 @@
-name: Build APk
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install all dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            openjdk-17-jdk \
-            autoconf \
-            automake \
-            libtool \
-            libtool-bin \
-            m4 \
-            pkg-config \
-            zlib1g-dev \
-            build-essential \
-            git \
-            wget \
-            unzip \
-            libffi-dev \
-            libssl-dev \
-            libsqlite3-dev \
-            libreadline-dev
-          
-          # Reconfigure autotools
-          sudo apt-get install -y --reinstall autoconf automake libtool
-          
-          # Verify libtool
-          libtoolize --version
-          autoconf --version
-
-      - name: Install Buildozer and dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install cython
-          pip install buildozer
-
-      - name: Setup Android SDK
-        run: |
-          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
-          unzip -q tools.zip
-          mv cmdline-tools latest
-          rm tools.zip
-          mkdir -p $ANDROID_HOME/tools/bin
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
-          export PATH="$PATH:$ANDROID_HOME/tools/bin"
-
-      - name: Install SDK packages
-        run: |
-          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-          export PATH="$PATH:$ANDROID_HOME/tools/bin"
-          yes | sdkmanager --licenses || true
-          sdkmanager "build-tools;34.0.0"
-          sdkmanager "platforms;android-34"
-          sdkmanager "ndk;28.0.12674087"
-
-      - name: Build APK
-        run: |
-          echo y | buildozer -v android debug
-        timeout-minutes: 120
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: bin/*.apk
-          if-no-files-found: warn
+- name: Install all dependencies
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y \
+      openjdk-17-jdk \
+      autoconf \
+      automake \
+      libtool \
+      libtool-bin \
+      m4 \
+      pkg-config \
+      zlib1g-dev \
+      build-essential \
+      git \
+      wget \
+      unzip \
+      libffi-dev \
+      libssl-dev \
+      libsqlite3-dev \
+      libreadline-dev
+    
+    # Reinstall and initialize autotools properly
+    sudo apt-get install -y --reinstall autoconf automake libtool
+    
+    # Initialize libtool macros
+    sudo libtoolize --install --copy --force || libtoolize --install --copy --force
+    
+    # Verify installation
+    libtoolize --version
+    autoconf --version
+    automake --version
